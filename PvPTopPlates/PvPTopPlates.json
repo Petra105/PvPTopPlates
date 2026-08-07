@@ -1,0 +1,14 @@
+{
+  "Author": "Melody Pendragon",
+  "Name": "PvP TopPlates",
+  "Punchline": "Keeps PvP player health bars above the 3D world.",
+  "Description": "Draws replacement PvP player health bars in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "pvp",
+    "ui",
+    "nameplates",
+    "health bars"
+  ]
+}
+
