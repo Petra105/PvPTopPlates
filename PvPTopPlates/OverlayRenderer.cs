@@ -11,6 +11,7 @@ namespace PvPTopPlates;
 internal sealed class OverlayRenderer
 {
     private const uint GuardStatusId = 3054;
+    private const uint AlternateGuardStatusId = 3673;
     private const float GuardDurationSeconds = 4f;
     private const float GuardRecastSeconds = 30f;
 
@@ -545,7 +546,8 @@ internal sealed class OverlayRenderer
     {
         foreach (var status in actor.StatusList)
         {
-            if (status.StatusId != GuardStatusId)
+            if (status.StatusId != GuardStatusId &&
+                status.StatusId != AlternateGuardStatusId)
                 continue;
 
             remainingTime = float.IsFinite(status.RemainingTime)

@@ -33,6 +33,7 @@ This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
   solid while active, and slashed while on an observed cooldown.
 - Observes enemy Guard actions directly so their cooldown state is retained
   even if the short active-status window is missed between rendered frames.
+- Recognizes both Guard status variants currently exposed by the game.
 - Supports configurable range, HP and MP bar size, world height, screen
   offset, colors, shield overlay, Guard-symbol size and spacing, names, HP
   percentages, and target highlighting.
@@ -93,7 +94,7 @@ players.
 Enemy actors must remain targetable. This prevents the overlay from exposing
 players while the game marks them hidden, untargetable, or unavailable.
 
-Guard's active state is read from the status effects already exposed for the
+Guard's active state is read from either Guard status variant exposed for the
 loaded actor. PvP TopPlates also observes client-received Guard action effects
 for both allies and enemies, allowing the 30-second cooldown state to begin
 even when the short active-status window is missed. A Guard use that occurs

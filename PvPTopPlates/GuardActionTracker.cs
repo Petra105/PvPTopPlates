@@ -10,7 +10,7 @@ namespace PvPTopPlates;
 
 internal sealed class GuardActionTracker : IDisposable
 {
-    private const uint GuardActionId = 29053;
+    private const uint GuardActionId = 29054;
     private const uint InvalidEntityId = 0xE000_0000;
 
     private readonly ConcurrentDictionary<uint, GuardUseObservation> observations = new();
