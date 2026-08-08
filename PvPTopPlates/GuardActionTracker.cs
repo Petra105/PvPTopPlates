@@ -25,7 +25,7 @@ internal sealed class GuardActionTracker : IDisposable
         ActionEffectHandler.TargetEffects* effects,
         GameObjectId* targetEntityIds);
 
-    public GuardActionTracker(
+    public unsafe GuardActionTracker(
         IGameInteropProvider gameInteropProvider,
         IPluginLog log)
     {
