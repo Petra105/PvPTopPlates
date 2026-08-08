@@ -1,0 +1,183 @@
+name: Build and publish release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "PvPTopPlates/**"
+      - "global.json"
+      - ".github/workflows/release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pvp-topplates-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Download Dalamud
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile latest.zip
+          Expand-Archive -Force latest.zip "$env:AppData\XIVLauncher\addon\Hooks\dev"
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$project = Get-Content ".\PvPTopPlates\PvPTopPlates.csproj"
+          $assemblyVersion = [string]$project.Project.PropertyGroup.Version
+          if ($assemblyVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') {
+              throw "Project Version must contain four numeric components. Got: $assemblyVersion"
+          }
+
+          $parts = $assemblyVersion.Split('.')
+          $releaseVersion = if ($parts[3] -eq '0') {
+              ($parts[0..2] -join '.')
+          } else {
+              $assemblyVersion
+          }
+
+          "assembly-version=$assemblyVersion" >> $env:GITHUB_OUTPUT
+          "release-version=$releaseVersion" >> $env:GITHUB_OUTPUT
+          "tag=v$releaseVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Ensure version is not already published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release view "${{ steps.version.outputs.tag }}" --repo "${{ github.repository }}" 2>$null
+          if ($LASTEXITCODE -eq 0) {
+              throw "${{ steps.version.outputs.tag }} already exists. Bump <Version> before publishing changed plugin code."
+          }
+
+      - name: Restore locked dependencies
+        run: dotnet restore .\PvPTopPlates\PvPTopPlates.csproj --locked-mode
+
+      - name: Build release
+        run: >-
+          dotnet build .\PvPTopPlates\PvPTopPlates.csproj
+          --configuration Release
+          --no-restore
+          -p:Platform=x64
+
+      - name: Prepare and validate package
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem ".\PvPTopPlates\bin" -Recurse -Filter "latest.zip" |
+              Sort-Object LastWriteTimeUtc -Descending |
+              Select-Object -First 1
+          if (-not $zip) {
+              Get-ChildItem ".\PvPTopPlates\bin" -Recurse | Select-Object FullName
+              throw "Could not find the Dalamud latest.zip package."
+          }
+
+          $manifestPath = Join-Path $zip.Directory.FullName "PvPTopPlates.json"
+          if (-not (Test-Path $manifestPath)) {
+              throw "Could not find PvPTopPlates.json beside latest.zip."
+          }
+
+          Copy-Item $zip.FullName ".\PvPTopPlates.zip"
+          Copy-Item $manifestPath ".\PvPTopPlates.generated.json"
+
+          $manifest = Get-Content ".\PvPTopPlates.generated.json" -Raw | ConvertFrom-Json
+          if ($manifest.InternalName -ne "PvPTopPlates") {
+              throw "Unexpected InternalName: $($manifest.InternalName)"
+          }
+          if ($manifest.AssemblyVersion -ne "${{ steps.version.outputs.assembly-version }}") {
+              throw "Manifest AssemblyVersion $($manifest.AssemblyVersion) does not match the project version."
+          }
+          if ([int]$manifest.DalamudApiLevel -ne 15) {
+              throw "Unexpected Dalamud API level: $($manifest.DalamudApiLevel)"
+          }
+
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [IO.Compression.ZipFile]::OpenRead((Resolve-Path ".\PvPTopPlates.zip"))
+          try {
+              $entryNames = @($archive.Entries | ForEach-Object FullName)
+              foreach ($required in @("PvPTopPlates.dll", "PvPTopPlates.json")) {
+                  if ($entryNames -notcontains $required) {
+                      throw "Release ZIP is missing $required."
+                  }
+              }
+          } finally {
+              $archive.Dispose()
+          }
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: |
+            PvPTopPlates.zip
+            PvPTopPlates.generated.json
+
+      - name: Verify published ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force ".\published" | Out-Null
+          gh release download "${{ steps.version.outputs.tag }}" `
+              --repo "${{ github.repository }}" `
+              --dir ".\published" `
+              --pattern "PvPTopPlates.zip"
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to download the published PvPTopPlates.zip."
+          }
+
+          $localHash = (Get-FileHash ".\PvPTopPlates.zip" -Algorithm SHA256).Hash
+          $publishedHash = (Get-FileHash ".\published\PvPTopPlates.zip" -Algorithm SHA256).Hash
+          if ($localHash -ne $publishedHash) {
+              throw "The published ZIP does not match the verified build."
+          }
+
+      - name: Publish repository metadata
+        shell: pwsh
+        run: |
+          $manifest = Get-Content ".\PvPTopPlates.generated.json" -Raw | ConvertFrom-Json
+          $releaseBase = "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}"
+
+          $manifest | Add-Member -NotePropertyName IsHide -NotePropertyValue $false -Force
+          $manifest | Add-Member -NotePropertyName IsTestingExclusive -NotePropertyValue $false -Force
+          $manifest | Add-Member -NotePropertyName DownloadLinkInstall -NotePropertyValue "$releaseBase/PvPTopPlates.zip" -Force
+          $manifest | Add-Member -NotePropertyName DownloadLinkUpdate -NotePropertyValue "$releaseBase/PvPTopPlates.zip" -Force
+          $manifest | Add-Member -NotePropertyName LastUpdate -NotePropertyValue ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) -Force
+
+          ConvertTo-Json -InputObject ([object[]]@($manifest)) -Depth 20 |
+              Set-Content ".\repo.json" -Encoding utf8NoBOM
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add repo.json
+          git commit -m "Publish ${{ steps.version.outputs.tag }} repository metadata"
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to commit repo.json."
+          }
+
+          git push origin HEAD:main
+          if ($LASTEXITCODE -ne 0) {
+              throw "Failed to push repo.json."
+          }
