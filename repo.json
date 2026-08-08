@@ -3,8 +3,8 @@
     "Author": "Melody Pendragon",
     "Name": "PvP TopPlates",
     "InternalName": "PvPTopPlates",
-    "AssemblyVersion": "1.1.0.0",
-    "Description": "Draws stabilized PvP player HP, shield, and MP bars in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
+    "AssemblyVersion": "1.2.0.0",
+    "Description": "Draws stabilized PvP player HP, shield, MP, and Guard-state indicators in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/Petra105/PvPTopPlates",
     "Tags": [
@@ -12,20 +12,21 @@
       "ui",
       "nameplates",
       "health bars",
-      "mana bars"
+      "mana bars",
+      "guard"
     ],
     "DalamudApiLevel": 15,
     "LoadRequiredState": 0,
     "LoadSync": false,
     "CanUnloadAsync": false,
     "LoadPriority": 0,
-    "Punchline": "Keeps stable PvP HP and MP bars above the 3D world.",
-    "Changelog": "Adds a configurable MP bar and frame-rate-independent screen-space stabilization to reduce plate jitter.",
+    "Punchline": "Keeps PvP resources and Guard state above the 3D world.",
+    "Changelog": "Adds a configurable three-state Guard symbol showing ready, active, and observed cooldown states.",
     "AcceptsFeedback": true,
     "IsHide": false,
     "IsTestingExclusive": false,
-    "DownloadLinkInstall": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.1.0/PvPTopPlates.zip",
-    "DownloadLinkUpdate": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.1.0/PvPTopPlates.zip",
-    "LastUpdate": 1786225512
+    "DownloadLinkInstall": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.2.0/PvPTopPlates.zip",
+    "DownloadLinkUpdate": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.2.0/PvPTopPlates.zip",
+    "LastUpdate": 1786227520
   }
 ]
