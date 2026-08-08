@@ -1,7 +1,7 @@
 # PvP TopPlates
 
-PvP TopPlates is a Dalamud plugin that redraws player HP, shield, and MP bars
-in ImGui's foreground layer. The bars are projected from each player
+PvP TopPlates is a Dalamud plugin that redraws player HP, shield, MP, and Guard
+state in ImGui's foreground layer. The bars are projected from each player
 character's world position, stabilized in screen space, and rendered as
 top-level UI with no world depth test. Terrain, walls, ramps, and other 3D
 geometry therefore cannot draw over them.
@@ -29,9 +29,11 @@ This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
   player, and other friendly players.
 - Smooths small frame-to-frame projection changes with a configurable dead
   zone, frame-rate-independent response, and large-movement snap threshold.
+- Shows an optional shield symbol for Guard: outlined/checkmarked when ready,
+  solid while active, and slashed while on an observed cooldown.
 - Supports configurable range, HP and MP bar size, world height, screen
-  offset, colors, shield overlay, names, HP percentages, and target
-  highlighting.
+  offset, colors, shield overlay, Guard-symbol size and spacing, names, HP
+  percentages, and target highlighting.
 - Hides with the game UI by default.
 - Never modifies game packets, HP values, targeting, or the native renderer.
 
@@ -88,6 +90,13 @@ players.
 
 Enemy actors must remain targetable. This prevents the overlay from exposing
 players while the game marks them hidden, untargetable, or unavailable.
+
+Guard's active state is read from the status effects already exposed for the
+loaded actor. The 30-second cooldown state is inferred after PvP TopPlates
+observes that activation. A Guard use that occurs while an actor is not loaded
+or visible to the client cannot be reconstructed, so the symbol returns to the
+ready state when no observed cooldown remains. Revival resets the tracked
+state because PvP action recast timers reset on revival.
 
 ## Compatibility
 

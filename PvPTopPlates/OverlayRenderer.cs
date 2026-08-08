@@ -10,11 +10,17 @@ namespace PvPTopPlates;
 
 internal sealed class OverlayRenderer
 {
+    private const uint GuardStatusId = 3054;
+    private const float GuardDurationSeconds = 4f;
+    private const float GuardRecastSeconds = 30f;
+
     private readonly Configuration configuration;
     private readonly NativeNameplateTracker nameplateTracker;
     private readonly List<BarCandidate> candidates = new(64);
     private readonly Dictionary<ulong, PositionState> positionStates = new(64);
+    private readonly Dictionary<ulong, GuardTrackingState> guardTrackingStates = new(64);
     private readonly List<ulong> stalePositionIds = new(64);
+    private readonly List<ulong> staleGuardIds = new(64);
     private uint frameNumber;
 
     public OverlayRenderer(
@@ -30,6 +36,9 @@ internal sealed class OverlayRenderer
         if (!ShouldDraw())
         {
             positionStates.Clear();
+            if (!Plugin.ClientState.IsPvP)
+                guardTrackingStates.Clear();
+
             return;
         }
 
@@ -46,6 +55,7 @@ internal sealed class OverlayRenderer
         var uiScale = Math.Max(0.5f, ImGuiHelpers.GlobalScale);
         var displaySize = ImGui.GetIO().DisplaySize;
         var deltaTime = GetFrameDeltaTime();
+        var currentTick = Environment.TickCount64;
         var currentTargetId = Plugin.TargetManager.Target?.GameObjectId ?? 0;
         var requireNativePlate =
             configuration.RequireNativeNameplatePresence &&
@@ -61,6 +71,7 @@ internal sealed class OverlayRenderer
                     uiScale,
                     displaySize,
                     deltaTime,
+                    currentTick,
                     out var candidate))
             {
                 continue;
@@ -69,7 +80,7 @@ internal sealed class OverlayRenderer
             candidates.Add(candidate);
         }
 
-        PrunePositionStates();
+        PruneTrackingStates();
 
         candidates.Sort(static (left, right) =>
         {
@@ -106,12 +117,15 @@ internal sealed class OverlayRenderer
         float uiScale,
         Vector2 displaySize,
         float deltaTime,
+        long currentTick,
         out BarCandidate candidate)
     {
         candidate = default;
 
         if (!actor.IsValid() || actor.GameObjectId == 0)
             return false;
+
+        var guardState = UpdateGuardState(actor, currentTick);
 
         var relation = GetRelation(actor, localPlayer.GameObjectId);
         if (!ShouldShowRelation(relation))
@@ -153,6 +167,14 @@ internal sealed class OverlayRenderer
 
         var halfWidth = configuration.BarWidth * uiScale * 0.5f;
         var borderThickness = configuration.BorderThickness * uiScale;
+        var rightExtent = halfWidth + borderThickness;
+        if (configuration.ShowGuardStateSymbol)
+        {
+            rightExtent +=
+                (configuration.GuardSymbolSpacing * uiScale) +
+                (configuration.GuardSymbolSize * uiScale);
+        }
+
         var stackBottom = screenPosition.Y +
                           (configuration.BarHeight * uiScale) +
                           borderThickness;
@@ -164,7 +186,7 @@ internal sealed class OverlayRenderer
                 (configuration.MpBarHeight * uiScale);
         }
 
-        if (screenPosition.X + halfWidth < 0 ||
+        if (screenPosition.X + rightExtent < 0 ||
             screenPosition.X - halfWidth > displaySize.X ||
             stackBottom < 0 ||
             screenPosition.Y - borderThickness > displaySize.Y)
@@ -182,6 +204,7 @@ internal sealed class OverlayRenderer
             screenPosition,
             distance,
             relation,
+            guardState,
             actor.GameObjectId == currentTargetId);
 
         return true;
@@ -288,6 +311,21 @@ internal sealed class OverlayRenderer
             stackBorderMaximum = mpMaximum + borderOffset;
         }
 
+        if (configuration.ShowGuardStateSymbol)
+        {
+            var symbolSize = Math.Max(6f, configuration.GuardSymbolSize * uiScale);
+            var symbolSpacing = Math.Max(0f, configuration.GuardSymbolSpacing * uiScale);
+            var symbolCenter = new Vector2(
+                borderMaximum.X + symbolSpacing + (symbolSize * 0.5f),
+                barMinimum.Y + (height * 0.5f));
+            DrawGuardSymbol(
+                drawList,
+                symbolCenter,
+                symbolSize,
+                candidate.GuardState,
+                uiScale);
+        }
+
         if (configuration.HighlightCurrentTarget && candidate.IsCurrentTarget)
         {
             var targetOffset = new Vector2(1.5f * uiScale);
@@ -355,6 +393,147 @@ internal sealed class OverlayRenderer
         }
     }
 
+    private void DrawGuardSymbol(
+        ImDrawListPtr drawList,
+        Vector2 center,
+        float size,
+        GuardState state,
+        float uiScale)
+    {
+        var halfSize = size * 0.5f;
+        var top = center.Y - halfSize;
+        var left = center.X - (halfSize * 0.78f);
+        var right = center.X + (halfSize * 0.78f);
+        var shoulder = top + (size * 0.18f);
+        var lowerSide = top + (size * 0.62f);
+        var bottom = top + size;
+
+        var topLeft = new Vector2(left, shoulder);
+        var topRight = new Vector2(right, shoulder);
+        var lowerRight = new Vector2(right - (size * 0.08f), lowerSide);
+        var tip = new Vector2(center.X, bottom);
+        var lowerLeft = new Vector2(left + (size * 0.08f), lowerSide);
+
+        var stateColor = state switch
+        {
+            GuardState.Active => configuration.GuardActiveColor,
+            GuardState.Cooldown => configuration.GuardCooldownColor,
+            _ => configuration.GuardReadyColor,
+        };
+        var fillColor = state == GuardState.Active
+            ? stateColor
+            : configuration.EmptyHealthColor;
+        var fill = ToColor(fillColor);
+        var outline = ToColor(stateColor);
+
+        drawList.AddTriangleFilled(center, topLeft, topRight, fill);
+        drawList.AddTriangleFilled(center, topRight, lowerRight, fill);
+        drawList.AddTriangleFilled(center, lowerRight, tip, fill);
+        drawList.AddTriangleFilled(center, tip, lowerLeft, fill);
+        drawList.AddTriangleFilled(center, lowerLeft, topLeft, fill);
+
+        var outlineThickness = Math.Max(1f, 1.5f * uiScale);
+        drawList.AddLine(topLeft, topRight, outline, outlineThickness);
+        drawList.AddLine(topRight, lowerRight, outline, outlineThickness);
+        drawList.AddLine(lowerRight, tip, outline, outlineThickness);
+        drawList.AddLine(tip, lowerLeft, outline, outlineThickness);
+        drawList.AddLine(lowerLeft, topLeft, outline, outlineThickness);
+
+        if (state == GuardState.Ready)
+        {
+            var checkStart = new Vector2(
+                center.X - (size * 0.23f),
+                center.Y + (size * 0.02f));
+            var checkMiddle = new Vector2(
+                center.X - (size * 0.05f),
+                center.Y + (size * 0.20f));
+            var checkEnd = new Vector2(
+                center.X + (size * 0.26f),
+                center.Y - (size * 0.18f));
+            drawList.AddLine(checkStart, checkMiddle, outline, outlineThickness);
+            drawList.AddLine(checkMiddle, checkEnd, outline, outlineThickness);
+        }
+        else if (state == GuardState.Active)
+        {
+            drawList.AddCircleFilled(
+                center,
+                Math.Max(1.5f, size * 0.11f),
+                ToColor(configuration.TextColor));
+        }
+        else
+        {
+            var slashStart = new Vector2(
+                center.X - (size * 0.25f),
+                center.Y + (size * 0.25f));
+            var slashEnd = new Vector2(
+                center.X + (size * 0.25f),
+                center.Y - (size * 0.25f));
+            drawList.AddLine(slashStart, slashEnd, outline, outlineThickness);
+        }
+    }
+
+    private GuardState UpdateGuardState(IBattleChara actor, long currentTick)
+    {
+        guardTrackingStates.TryGetValue(actor.GameObjectId, out var tracked);
+
+        var isDead = actor.IsDead || actor.CurrentHp == 0;
+        if (isDead)
+        {
+            guardTrackingStates[actor.GameObjectId] = new GuardTrackingState(
+                false,
+                true,
+                0,
+                frameNumber);
+            return GuardState.Ready;
+        }
+
+        var cooldownEndsAt = tracked.WasDead ? 0 : tracked.CooldownEndsAt;
+        var isActive = TryGetGuardRemainingTime(actor, out var remainingTime);
+        if (isActive && !tracked.WasActive)
+        {
+            var observedAge = GuardDurationSeconds - Math.Clamp(
+                remainingTime,
+                0f,
+                GuardDurationSeconds);
+            var remainingRecast = Math.Max(
+                0f,
+                GuardRecastSeconds - observedAge);
+            cooldownEndsAt = currentTick + (long)MathF.Round(remainingRecast * 1_000f);
+        }
+
+        var state = isActive
+            ? GuardState.Active
+            : currentTick < cooldownEndsAt
+                ? GuardState.Cooldown
+                : GuardState.Ready;
+
+        guardTrackingStates[actor.GameObjectId] = new GuardTrackingState(
+            isActive,
+            false,
+            cooldownEndsAt,
+            frameNumber);
+        return state;
+    }
+
+    private static bool TryGetGuardRemainingTime(
+        IBattleChara actor,
+        out float remainingTime)
+    {
+        foreach (var status in actor.StatusList)
+        {
+            if (status.StatusId != GuardStatusId)
+                continue;
+
+            remainingTime = float.IsFinite(status.RemainingTime)
+                ? status.RemainingTime
+                : GuardDurationSeconds;
+            return true;
+        }
+
+        remainingTime = 0f;
+        return false;
+    }
+
     private Vector2 StabilizePosition(
         ulong actorId,
         Vector2 rawPosition,
@@ -400,23 +579,40 @@ internal sealed class OverlayRenderer
             return;
 
         positionStates.Clear();
+        guardTrackingStates.Clear();
         frameNumber = 1;
     }
 
-    private void PrunePositionStates()
+    private void PruneTrackingStates()
     {
-        if (positionStates.Count == 0 || frameNumber % 120 != 0)
+        if (frameNumber % 120 != 0)
             return;
 
-        stalePositionIds.Clear();
-        foreach (var (actorId, state) in positionStates)
+        if (positionStates.Count > 0)
         {
-            if (frameNumber - state.LastSeenFrame > 300)
-                stalePositionIds.Add(actorId);
+            stalePositionIds.Clear();
+            foreach (var (actorId, state) in positionStates)
+            {
+                if (frameNumber - state.LastSeenFrame > 300)
+                    stalePositionIds.Add(actorId);
+            }
+
+            foreach (var actorId in stalePositionIds)
+                positionStates.Remove(actorId);
         }
 
-        foreach (var actorId in stalePositionIds)
-            positionStates.Remove(actorId);
+        if (guardTrackingStates.Count > 0)
+        {
+            staleGuardIds.Clear();
+            foreach (var (actorId, state) in guardTrackingStates)
+            {
+                if (frameNumber - state.LastSeenFrame > 300)
+                    staleGuardIds.Add(actorId);
+            }
+
+            foreach (var actorId in staleGuardIds)
+                guardTrackingStates.Remove(actorId);
+        }
     }
 
     private static float GetFrameDeltaTime()
@@ -467,6 +663,13 @@ internal sealed class OverlayRenderer
         OtherFriendly,
     }
 
+    private enum GuardState
+    {
+        Ready,
+        Active,
+        Cooldown,
+    }
+
     private readonly record struct BarCandidate(
         string Name,
         uint CurrentHp,
@@ -477,9 +680,16 @@ internal sealed class OverlayRenderer
         Vector2 ScreenPosition,
         float Distance,
         PlayerRelation Relation,
+        GuardState GuardState,
         bool IsCurrentTarget);
 
     private readonly record struct PositionState(
         Vector2 Position,
+        uint LastSeenFrame);
+
+    private readonly record struct GuardTrackingState(
+        bool WasActive,
+        bool WasDead,
+        long CooldownEndsAt,
         uint LastSeenFrame);
 }

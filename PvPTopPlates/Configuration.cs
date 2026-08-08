@@ -23,6 +23,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowNames { get; set; }
     public bool ShowHpPercent { get; set; }
     public bool ShowMpBar { get; set; } = true;
+    public bool ShowGuardStateSymbol { get; set; } = true;
     public bool ShowShields { get; set; } = true;
     public bool HighlightCurrentTarget { get; set; } = true;
     public bool StabilizePositions { get; set; } = true;
@@ -34,6 +35,8 @@ public sealed class Configuration : IPluginConfiguration
     public float BarHeight { get; set; } = 11f;
     public float MpBarHeight { get; set; } = 4f;
     public float MpBarSpacing { get; set; } = 2f;
+    public float GuardSymbolSize { get; set; } = 16f;
+    public float GuardSymbolSpacing { get; set; } = 5f;
     public float BorderThickness { get; set; } = 2f;
     public float CornerRounding { get; set; } = 2f;
     public float StabilizationDeadZone { get; set; } = 0.60f;
@@ -48,6 +51,9 @@ public sealed class Configuration : IPluginConfiguration
     public Vector4 EmptyHealthColor { get; set; } = new(0.035f, 0.035f, 0.045f, 0.88f);
     public Vector4 MpColor { get; set; } = new(0.30f, 0.46f, 0.98f, 0.96f);
     public Vector4 EmptyMpColor { get; set; } = new(0.025f, 0.035f, 0.09f, 0.88f);
+    public Vector4 GuardReadyColor { get; set; } = new(0.28f, 0.90f, 0.62f, 1f);
+    public Vector4 GuardActiveColor { get; set; } = new(1f, 0.78f, 0.20f, 1f);
+    public Vector4 GuardCooldownColor { get; set; } = new(0.42f, 0.44f, 0.50f, 0.92f);
     public Vector4 BorderColor { get; set; } = new(0.01f, 0.01f, 0.015f, 0.98f);
     public Vector4 ShieldColor { get; set; } = new(0.86f, 0.94f, 1f, 0.48f);
     public Vector4 TextColor { get; set; } = new(1f, 1f, 1f, 1f);
@@ -76,6 +82,7 @@ public sealed class Configuration : IPluginConfiguration
         ShowNames = defaults.ShowNames;
         ShowHpPercent = defaults.ShowHpPercent;
         ShowMpBar = defaults.ShowMpBar;
+        ShowGuardStateSymbol = defaults.ShowGuardStateSymbol;
         ShowShields = defaults.ShowShields;
         HighlightCurrentTarget = defaults.HighlightCurrentTarget;
         StabilizePositions = defaults.StabilizePositions;
@@ -87,6 +94,8 @@ public sealed class Configuration : IPluginConfiguration
         BarHeight = defaults.BarHeight;
         MpBarHeight = defaults.MpBarHeight;
         MpBarSpacing = defaults.MpBarSpacing;
+        GuardSymbolSize = defaults.GuardSymbolSize;
+        GuardSymbolSpacing = defaults.GuardSymbolSpacing;
         BorderThickness = defaults.BorderThickness;
         CornerRounding = defaults.CornerRounding;
         StabilizationDeadZone = defaults.StabilizationDeadZone;
@@ -101,6 +110,9 @@ public sealed class Configuration : IPluginConfiguration
         EmptyHealthColor = defaults.EmptyHealthColor;
         MpColor = defaults.MpColor;
         EmptyMpColor = defaults.EmptyMpColor;
+        GuardReadyColor = defaults.GuardReadyColor;
+        GuardActiveColor = defaults.GuardActiveColor;
+        GuardCooldownColor = defaults.GuardCooldownColor;
         BorderColor = defaults.BorderColor;
         ShieldColor = defaults.ShieldColor;
         TextColor = defaults.TextColor;

@@ -103,6 +103,12 @@ internal sealed class ConfigWindow : Window, IDisposable
             configuration.ShowMpBar,
             value => configuration.ShowMpBar = value);
         changed |= DrawCheckbox(
+            "Guard state symbol",
+            configuration.ShowGuardStateSymbol,
+            value => configuration.ShowGuardStateSymbol = value);
+        HelpMarker(
+            "Outlined shield: ready. Solid shield: active. Slashed shield: cooldown after an observed Guard activation.");
+        changed |= DrawCheckbox(
             "Shield overlay",
             configuration.ShowShields,
             value => configuration.ShowShields = value);
@@ -164,6 +170,20 @@ internal sealed class ConfigWindow : Window, IDisposable
             12f,
             "%.0f px",
             value => configuration.MpBarSpacing = value);
+        changed |= DrawSliderFloat(
+            "Guard symbol size",
+            configuration.GuardSymbolSize,
+            8f,
+            36f,
+            "%.0f px",
+            value => configuration.GuardSymbolSize = value);
+        changed |= DrawSliderFloat(
+            "Guard symbol spacing",
+            configuration.GuardSymbolSpacing,
+            0f,
+            20f,
+            "%.0f px",
+            value => configuration.GuardSymbolSpacing = value);
         changed |= DrawSliderFloat(
             "Border thickness",
             configuration.BorderThickness,
@@ -247,6 +267,18 @@ internal sealed class ConfigWindow : Window, IDisposable
             "Empty MP",
             configuration.EmptyMpColor,
             value => configuration.EmptyMpColor = value);
+        changed |= DrawColorEditor(
+            "Guard ready",
+            configuration.GuardReadyColor,
+            value => configuration.GuardReadyColor = value);
+        changed |= DrawColorEditor(
+            "Guard active",
+            configuration.GuardActiveColor,
+            value => configuration.GuardActiveColor = value);
+        changed |= DrawColorEditor(
+            "Guard cooldown",
+            configuration.GuardCooldownColor,
+            value => configuration.GuardCooldownColor = value);
         changed |= DrawColorEditor(
             "Border",
             configuration.BorderColor,
