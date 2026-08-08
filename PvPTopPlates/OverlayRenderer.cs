@@ -13,6 +13,9 @@ internal sealed class OverlayRenderer
     private readonly Configuration configuration;
     private readonly NativeNameplateTracker nameplateTracker;
     private readonly List<BarCandidate> candidates = new(64);
+    private readonly Dictionary<ulong, PositionState> positionStates = new(64);
+    private readonly List<ulong> stalePositionIds = new(64);
+    private uint frameNumber;
 
     public OverlayRenderer(
         Configuration configuration,
@@ -25,16 +28,24 @@ internal sealed class OverlayRenderer
     public void Draw()
     {
         if (!ShouldDraw())
+        {
+            positionStates.Clear();
             return;
+        }
 
         var localPlayer = Plugin.ObjectTable.LocalPlayer;
         if (localPlayer is null || !localPlayer.IsValid())
+        {
+            positionStates.Clear();
             return;
+        }
 
         candidates.Clear();
+        AdvanceFrame();
 
         var uiScale = Math.Max(0.5f, ImGuiHelpers.GlobalScale);
         var displaySize = ImGui.GetIO().DisplaySize;
+        var deltaTime = GetFrameDeltaTime();
         var currentTargetId = Plugin.TargetManager.Target?.GameObjectId ?? 0;
         var requireNativePlate =
             configuration.RequireNativeNameplatePresence &&
@@ -49,6 +60,7 @@ internal sealed class OverlayRenderer
                     requireNativePlate,
                     uiScale,
                     displaySize,
+                    deltaTime,
                     out var candidate))
             {
                 continue;
@@ -56,6 +68,8 @@ internal sealed class OverlayRenderer
 
             candidates.Add(candidate);
         }
+
+        PrunePositionStates();
 
         candidates.Sort(static (left, right) =>
         {
@@ -91,6 +105,7 @@ internal sealed class OverlayRenderer
         bool requireNativePlate,
         float uiScale,
         Vector2 displaySize,
+        float deltaTime,
         out BarCandidate candidate)
     {
         candidate = default;
@@ -130,13 +145,29 @@ internal sealed class OverlayRenderer
         }
 
         screenPosition.Y += configuration.ScreenOffsetY * uiScale;
+        screenPosition = StabilizePosition(
+            actor.GameObjectId,
+            screenPosition,
+            uiScale,
+            deltaTime);
 
         var halfWidth = configuration.BarWidth * uiScale * 0.5f;
-        var height = configuration.BarHeight * uiScale;
+        var borderThickness = configuration.BorderThickness * uiScale;
+        var stackBottom = screenPosition.Y +
+                          (configuration.BarHeight * uiScale) +
+                          borderThickness;
+        if (configuration.ShowMpBar && actor.MaxMp > 0)
+        {
+            stackBottom +=
+                (configuration.MpBarSpacing * uiScale) +
+                (borderThickness * 2f) +
+                (configuration.MpBarHeight * uiScale);
+        }
+
         if (screenPosition.X + halfWidth < 0 ||
             screenPosition.X - halfWidth > displaySize.X ||
-            screenPosition.Y + height < 0 ||
-            screenPosition.Y > displaySize.Y)
+            stackBottom < 0 ||
+            screenPosition.Y - borderThickness > displaySize.Y)
         {
             return false;
         }
@@ -145,6 +176,8 @@ internal sealed class OverlayRenderer
             actor.Name.TextValue,
             actor.CurrentHp,
             actor.MaxHp,
+            actor.CurrentMp,
+            actor.MaxMp,
             actor.ShieldPercentage,
             screenPosition,
             distance,
@@ -199,33 +232,19 @@ internal sealed class OverlayRenderer
         var borderMinimum = barMinimum - borderOffset;
         var borderMaximum = barMaximum + borderOffset;
 
-        drawList.AddRectFilled(
-            borderMinimum,
-            borderMaximum,
-            ToColor(configuration.BorderColor),
-            rounding + borderThickness);
-        drawList.AddRectFilled(
-            barMinimum,
-            barMaximum,
-            ToColor(configuration.EmptyHealthColor),
-            rounding);
-
         var healthRatio = Math.Clamp(
             (float)candidate.CurrentHp / candidate.MaximumHp,
             0f,
             1f);
-        var healthMaximum = new Vector2(
-            barMinimum.X + (width * healthRatio),
-            barMaximum.Y);
-
-        if (healthMaximum.X > barMinimum.X)
-        {
-            drawList.AddRectFilled(
-                barMinimum,
-                healthMaximum,
-                ToColor(GetRelationColor(candidate.Relation)),
-                rounding);
-        }
+        DrawFilledBar(
+            drawList,
+            barMinimum,
+            barMaximum,
+            healthRatio,
+            GetRelationColor(candidate.Relation),
+            configuration.EmptyHealthColor,
+            borderThickness,
+            rounding);
 
         if (configuration.ShowShields && candidate.ShieldPercentage > 0)
         {
@@ -241,12 +260,40 @@ internal sealed class OverlayRenderer
                 rounding);
         }
 
+        var stackBorderMinimum = borderMinimum;
+        var stackBorderMaximum = borderMaximum;
+        if (configuration.ShowMpBar && candidate.MaximumMp > 0)
+        {
+            var mpHeight = configuration.MpBarHeight * uiScale;
+            var mpSpacing = configuration.MpBarSpacing * uiScale;
+            var mpMinimum = new Vector2(
+                barMinimum.X,
+                borderMaximum.Y + mpSpacing + borderThickness);
+            var mpMaximum = mpMinimum + new Vector2(width, mpHeight);
+            var mpRatio = Math.Clamp(
+                (float)candidate.CurrentMp / candidate.MaximumMp,
+                0f,
+                1f);
+
+            DrawFilledBar(
+                drawList,
+                mpMinimum,
+                mpMaximum,
+                mpRatio,
+                configuration.MpColor,
+                configuration.EmptyMpColor,
+                borderThickness,
+                rounding);
+
+            stackBorderMaximum = mpMaximum + borderOffset;
+        }
+
         if (configuration.HighlightCurrentTarget && candidate.IsCurrentTarget)
         {
             var targetOffset = new Vector2(1.5f * uiScale);
             drawList.AddRect(
-                borderMinimum - targetOffset,
-                borderMaximum + targetOffset,
+                stackBorderMinimum - targetOffset,
+                stackBorderMaximum + targetOffset,
                 ToColor(configuration.TargetOutlineColor),
                 rounding + borderThickness + targetOffset.X,
                 ImDrawFlags.None,
@@ -271,6 +318,114 @@ internal sealed class OverlayRenderer
                 borderMinimum.Y - textSize.Y - (2f * uiScale));
             DrawShadowedText(drawList, textPosition, candidate.Name, uiScale);
         }
+    }
+
+    private void DrawFilledBar(
+        ImDrawListPtr drawList,
+        Vector2 minimum,
+        Vector2 maximum,
+        float fillRatio,
+        Vector4 filledColor,
+        Vector4 emptyColor,
+        float borderThickness,
+        float rounding)
+    {
+        var borderOffset = new Vector2(borderThickness);
+        drawList.AddRectFilled(
+            minimum - borderOffset,
+            maximum + borderOffset,
+            ToColor(configuration.BorderColor),
+            rounding + borderThickness);
+        drawList.AddRectFilled(
+            minimum,
+            maximum,
+            ToColor(emptyColor),
+            rounding);
+
+        var fillMaximum = new Vector2(
+            minimum.X + ((maximum.X - minimum.X) * fillRatio),
+            maximum.Y);
+        if (fillMaximum.X > minimum.X)
+        {
+            drawList.AddRectFilled(
+                minimum,
+                fillMaximum,
+                ToColor(filledColor),
+                rounding);
+        }
+    }
+
+    private Vector2 StabilizePosition(
+        ulong actorId,
+        Vector2 rawPosition,
+        float uiScale,
+        float deltaTime)
+    {
+        if (!configuration.StabilizePositions)
+            return rawPosition;
+
+        var result = rawPosition;
+        if (positionStates.TryGetValue(actorId, out var state) &&
+            frameNumber - state.LastSeenFrame <= 5)
+        {
+            var delta = rawPosition - state.Position;
+            var distance = delta.Length();
+            var deadZone = Math.Max(
+                0f,
+                configuration.StabilizationDeadZone * uiScale);
+            var snapDistance = Math.Max(
+                deadZone,
+                configuration.StabilizationSnapDistance * uiScale);
+
+            if (float.IsFinite(distance) && distance <= deadZone)
+            {
+                result = state.Position;
+            }
+            else if (float.IsFinite(distance) && distance < snapDistance)
+            {
+                var response = Math.Max(0.01f, configuration.StabilizationResponse);
+                var blend = 1f - MathF.Exp(-response * deltaTime);
+                result = state.Position + (delta * blend);
+            }
+        }
+
+        positionStates[actorId] = new PositionState(result, frameNumber);
+        return result;
+    }
+
+    private void AdvanceFrame()
+    {
+        frameNumber++;
+        if (frameNumber != 0)
+            return;
+
+        positionStates.Clear();
+        frameNumber = 1;
+    }
+
+    private void PrunePositionStates()
+    {
+        if (positionStates.Count == 0 || frameNumber % 120 != 0)
+            return;
+
+        stalePositionIds.Clear();
+        foreach (var (actorId, state) in positionStates)
+        {
+            if (frameNumber - state.LastSeenFrame > 300)
+                stalePositionIds.Add(actorId);
+        }
+
+        foreach (var actorId in stalePositionIds)
+            positionStates.Remove(actorId);
+    }
+
+    private static float GetFrameDeltaTime()
+    {
+        var deltaTime = ImGui.GetIO().DeltaTime;
+        if (!float.IsFinite(deltaTime) || deltaTime <= 0f)
+            return 1f / 60f;
+
+        return Math.Min(deltaTime, 0.1f);
     }
 
     private void DrawShadowedText(
@@ -316,10 +471,15 @@ internal sealed class OverlayRenderer
         string Name,
         uint CurrentHp,
         uint MaximumHp,
+        uint CurrentMp,
+        uint MaximumMp,
         byte ShieldPercentage,
         Vector2 ScreenPosition,
         float Distance,
         PlayerRelation Relation,
         bool IsCurrentTarget);
-}
 
+    private readonly record struct PositionState(
+        Vector2 Position,
+        uint LastSeenFrame);
+}

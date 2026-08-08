@@ -99,6 +99,10 @@ internal sealed class ConfigWindow : Window, IDisposable
             configuration.ShowHpPercent,
             value => configuration.ShowHpPercent = value);
         changed |= DrawCheckbox(
+            "MP bar",
+            configuration.ShowMpBar,
+            value => configuration.ShowMpBar = value);
+        changed |= DrawCheckbox(
             "Shield overlay",
             configuration.ShowShields,
             value => configuration.ShowShields = value);
@@ -147,6 +151,20 @@ internal sealed class ConfigWindow : Window, IDisposable
             "%.0f px",
             value => configuration.BarHeight = value);
         changed |= DrawSliderFloat(
+            "MP bar height",
+            configuration.MpBarHeight,
+            2f,
+            20f,
+            "%.0f px",
+            value => configuration.MpBarHeight = value);
+        changed |= DrawSliderFloat(
+            "MP bar spacing",
+            configuration.MpBarSpacing,
+            0f,
+            12f,
+            "%.0f px",
+            value => configuration.MpBarSpacing = value);
+        changed |= DrawSliderFloat(
             "Border thickness",
             configuration.BorderThickness,
             0f,
@@ -160,6 +178,41 @@ internal sealed class ConfigWindow : Window, IDisposable
             12f,
             "%.1f px",
             value => configuration.CornerRounding = value);
+
+        DrawSectionHeader("Stabilization");
+        changed |= DrawCheckbox(
+            "Stabilize plate movement",
+            configuration.StabilizePositions,
+            value => configuration.StabilizePositions = value);
+        HelpMarker(
+            "Smooths small frame-to-frame projection changes in screen space. Large movements snap immediately so camera turns remain responsive.");
+        changed |= DrawSliderFloat(
+            "Dead zone",
+            configuration.StabilizationDeadZone,
+            0f,
+            3f,
+            "%.2f px",
+            value => configuration.StabilizationDeadZone = value);
+        HelpMarker(
+            "Movement below this distance is ignored to prevent sub-pixel shimmer.");
+        changed |= DrawSliderFloat(
+            "Response",
+            configuration.StabilizationResponse,
+            1f,
+            40f,
+            "%.1f",
+            value => configuration.StabilizationResponse = value);
+        HelpMarker(
+            "Higher values follow movement more quickly. The response is independent of frame rate.");
+        changed |= DrawSliderFloat(
+            "Snap distance",
+            configuration.StabilizationSnapDistance,
+            8f,
+            160f,
+            "%.0f px",
+            value => configuration.StabilizationSnapDistance = value);
+        HelpMarker(
+            "Movement above this distance bypasses smoothing to avoid visible lag.");
 
         DrawSectionHeader("Colors");
         changed |= DrawColorEditor(
@@ -186,6 +239,14 @@ internal sealed class ConfigWindow : Window, IDisposable
             "Empty health",
             configuration.EmptyHealthColor,
             value => configuration.EmptyHealthColor = value);
+        changed |= DrawColorEditor(
+            "MP",
+            configuration.MpColor,
+            value => configuration.MpColor = value);
+        changed |= DrawColorEditor(
+            "Empty MP",
+            configuration.EmptyMpColor,
+            value => configuration.EmptyMpColor = value);
         changed |= DrawColorEditor(
             "Border",
             configuration.BorderColor,

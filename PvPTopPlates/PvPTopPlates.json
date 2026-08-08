@@ -1,15 +1,16 @@
 {
   "Author": "Melody Pendragon",
   "Name": "PvP TopPlates",
-  "Punchline": "Keeps PvP player health bars above the 3D world.",
-  "Description": "Draws replacement PvP player health bars in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
+  "Punchline": "Keeps stable PvP HP and MP bars above the 3D world.",
+  "Description": "Draws stabilized PvP player HP, shield, and MP bars in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
   "RepoUrl": "https://github.com/Petra105/PvPTopPlates",
   "ApplicableVersion": "any",
-  "Changelog": "Initial release.",
+  "Changelog": "Adds a configurable MP bar and frame-rate-independent screen-space stabilization to reduce plate jitter.",
   "Tags": [
     "pvp",
     "ui",
     "nameplates",
-    "health bars"
+    "health bars",
+    "mana bars"
   ]
 }

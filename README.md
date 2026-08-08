@@ -1,9 +1,10 @@
 # PvP TopPlates
 
-PvP TopPlates is a Dalamud plugin that redraws player health bars in ImGui's
-foreground layer. The bars are projected from each player character's world
-position, but rendered as top-level UI with no world depth test. Terrain,
-walls, ramps, and other 3D geometry therefore cannot draw over them.
+PvP TopPlates is a Dalamud plugin that redraws player HP, shield, and MP bars
+in ImGui's foreground layer. The bars are projected from each player
+character's world position, stabilized in screen space, and rendered as
+top-level UI with no world depth test. Terrain, walls, ramps, and other 3D
+geometry therefore cannot draw over them.
 
 This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
 
@@ -26,8 +27,11 @@ This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
 - Respects currently active native nameplates by default.
 - Separately filters enemies, party members, alliance members, the local
   player, and other friendly players.
-- Supports configurable range, bar size, world height, screen offset, colors,
-  shield overlay, names, HP percentages, and target highlighting.
+- Smooths small frame-to-frame projection changes with a configurable dead
+  zone, frame-rate-independent response, and large-movement snap threshold.
+- Supports configurable range, HP and MP bar size, world height, screen
+  offset, colors, shield overlay, names, HP percentages, and target
+  highlighting.
 - Hides with the game UI by default.
 - Never modifies game packets, HP values, targeting, or the native renderer.
 
