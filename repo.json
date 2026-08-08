@@ -14,12 +14,17 @@
       "health bars"
     ],
     "DalamudApiLevel": 15,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": false,
+    "LoadPriority": 0,
     "Punchline": "Keeps PvP player health bars above the 3D world.",
+    "Changelog": "Initial release.",
+    "AcceptsFeedback": true,
     "IsHide": false,
     "IsTestingExclusive": false,
     "DownloadLinkInstall": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.0.0/PvPTopPlates.zip",
     "DownloadLinkUpdate": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.0.0/PvPTopPlates.zip",
-    "LastUpdate": 1786226400,
-    "Changelog": "Initial release."
+    "LastUpdate": 1786220073
   }
 ]
