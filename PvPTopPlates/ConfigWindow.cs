@@ -44,7 +44,7 @@ internal sealed class ConfigWindow : Window, IDisposable
         ImGui.TextWrapped(
             "Bars are drawn through Dalamud's foreground UI layer. World geometry cannot cover them.");
 
-        ImGui.SeparatorText("General");
+        DrawSectionHeader("General");
         changed |= DrawCheckbox(
             "Enabled",
             configuration.Enabled,
@@ -67,7 +67,7 @@ internal sealed class ConfigWindow : Window, IDisposable
         HelpMarker(
             "Recommended. Limits the overlay to actors for which the game currently maintains a nameplate.");
 
-        ImGui.SeparatorText("Players");
+        DrawSectionHeader("Players");
         changed |= DrawCheckbox(
             "Enemies",
             configuration.ShowEnemies,
@@ -89,7 +89,7 @@ internal sealed class ConfigWindow : Window, IDisposable
             configuration.ShowOtherFriendlies,
             value => configuration.ShowOtherFriendlies = value);
 
-        ImGui.SeparatorText("Contents");
+        DrawSectionHeader("Contents");
         changed |= DrawCheckbox(
             "Names",
             configuration.ShowNames,
@@ -107,7 +107,7 @@ internal sealed class ConfigWindow : Window, IDisposable
             configuration.HighlightCurrentTarget,
             value => configuration.HighlightCurrentTarget = value);
 
-        ImGui.SeparatorText("Placement and size");
+        DrawSectionHeader("Placement and size");
         changed |= DrawSliderFloat(
             "Maximum distance",
             configuration.MaximumDistance,
@@ -161,7 +161,7 @@ internal sealed class ConfigWindow : Window, IDisposable
             "%.1f px",
             value => configuration.CornerRounding = value);
 
-        ImGui.SeparatorText("Colors");
+        DrawSectionHeader("Colors");
         changed |= DrawColorEditor(
             "Enemy",
             configuration.EnemyColor,
@@ -224,6 +224,13 @@ internal sealed class ConfigWindow : Window, IDisposable
 
         apply(value);
         return true;
+    }
+
+    private static void DrawSectionHeader(string label)
+    {
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.TextUnformatted(label);
     }
 
     private static bool DrawSliderFloat(
