@@ -7,6 +7,18 @@ walls, ramps, and other 3D geometry therefore cannot draw over them.
 
 This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
 
+## Install
+
+1. Open Dalamud Settings with `/xlsettings`.
+2. Open the `Experimental` tab.
+3. Add this URL under Custom Plugin Repositories:
+
+   ```text
+   https://raw.githubusercontent.com/Petra105/PvPTopPlates/main/repo.json
+   ```
+
+4. Save, then open `/xlplugins` and install **PvP TopPlates**.
+
 ## Behavior
 
 - Runs only in PvP by default.
@@ -81,4 +93,3 @@ small source update.
 
 Dalamud and other third-party FFXIV tools are not endorsed by Square Enix and
 may violate the FFXIV User Agreement. Use at your own risk.
-
