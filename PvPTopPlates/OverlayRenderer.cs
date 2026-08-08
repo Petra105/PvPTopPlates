@@ -16,6 +16,7 @@ internal sealed class OverlayRenderer
 
     private readonly Configuration configuration;
     private readonly NativeNameplateTracker nameplateTracker;
+    private readonly GuardActionTracker guardActionTracker;
     private readonly List<BarCandidate> candidates = new(64);
     private readonly Dictionary<ulong, PositionState> positionStates = new(64);
     private readonly Dictionary<ulong, GuardTrackingState> guardTrackingStates = new(64);
@@ -25,20 +26,25 @@ internal sealed class OverlayRenderer
 
     public OverlayRenderer(
         Configuration configuration,
-        NativeNameplateTracker nameplateTracker)
+        NativeNameplateTracker nameplateTracker,
+        GuardActionTracker guardActionTracker)
     {
         this.configuration = configuration;
         this.nameplateTracker = nameplateTracker;
+        this.guardActionTracker = guardActionTracker;
     }
 
     public void Draw()
     {
+        if (!Plugin.ClientState.IsPvP)
+        {
+            guardTrackingStates.Clear();
+            guardActionTracker.Clear();
+        }
+
         if (!ShouldDraw())
         {
             positionStates.Clear();
-            if (!Plugin.ClientState.IsPvP)
-                guardTrackingStates.Clear();
-
             return;
         }
 
@@ -476,6 +482,15 @@ internal sealed class OverlayRenderer
     {
         guardTrackingStates.TryGetValue(actor.GameObjectId, out var tracked);
 
+        var lastObservedUseAt = tracked.LastObservedUseAt;
+        if (guardActionTracker.TryGetLatestUse(
+                actor.EntityId,
+                out var observedUseAt) &&
+            observedUseAt > lastObservedUseAt)
+        {
+            lastObservedUseAt = observedUseAt;
+        }
+
         var isDead = actor.IsDead || actor.CurrentHp == 0;
         if (isDead)
         {
@@ -483,13 +498,21 @@ internal sealed class OverlayRenderer
                 false,
                 true,
                 0,
+                lastObservedUseAt,
                 frameNumber);
             return GuardState.Ready;
         }
 
         var cooldownEndsAt = tracked.WasDead ? 0 : tracked.CooldownEndsAt;
+        if (lastObservedUseAt > tracked.LastObservedUseAt &&
+            cooldownEndsAt <= currentTick)
+        {
+            cooldownEndsAt = lastObservedUseAt +
+                             (long)MathF.Round(GuardRecastSeconds * 1_000f);
+        }
+
         var isActive = TryGetGuardRemainingTime(actor, out var remainingTime);
-        if (isActive && !tracked.WasActive)
+        if (isActive && !tracked.WasActive && cooldownEndsAt <= currentTick)
         {
             var observedAge = GuardDurationSeconds - Math.Clamp(
                 remainingTime,
@@ -511,6 +534,7 @@ internal sealed class OverlayRenderer
             isActive,
             false,
             cooldownEndsAt,
+            lastObservedUseAt,
             frameNumber);
         return state;
     }
@@ -691,5 +715,6 @@ internal sealed class OverlayRenderer
         bool WasActive,
         bool WasDead,
         long CooldownEndsAt,
+        long LastObservedUseAt,
         uint LastSeenFrame);
 }

@@ -36,9 +36,13 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService]
     internal static IPluginLog Log { get; private set; } = null!;
 
+    [PluginService]
+    internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
+
     private readonly WindowSystem windowSystem = new("PvPTopPlates");
     private readonly ConfigWindow configWindow;
     private readonly NativeNameplateTracker nameplateTracker;
+    private readonly GuardActionTracker guardActionTracker;
     private readonly OverlayRenderer overlayRenderer;
 
     internal Configuration Configuration { get; }
@@ -51,7 +55,11 @@ public sealed class Plugin : IDalamudPlugin
 
         configWindow = new ConfigWindow(Configuration);
         nameplateTracker = new NativeNameplateTracker();
-        overlayRenderer = new OverlayRenderer(Configuration, nameplateTracker);
+        guardActionTracker = new GuardActionTracker(GameInteropProvider, Log);
+        overlayRenderer = new OverlayRenderer(
+            Configuration,
+            nameplateTracker,
+            guardActionTracker);
 
         windowSystem.AddWindow(configWindow);
 
@@ -81,6 +89,7 @@ public sealed class Plugin : IDalamudPlugin
 
         windowSystem.RemoveAllWindows();
         configWindow.Dispose();
+        guardActionTracker.Dispose();
     }
 
     private void Draw()

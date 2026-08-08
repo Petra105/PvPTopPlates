@@ -5,7 +5,7 @@
   "Description": "Draws stabilized PvP player HP, shield, MP, and Guard-state indicators in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
   "RepoUrl": "https://github.com/Petra105/PvPTopPlates",
   "ApplicableVersion": "any",
-  "Changelog": "Adds a configurable three-state Guard symbol showing ready, active, and observed cooldown states.",
+  "Changelog": "Adds direct enemy Guard-use observation so enemy cooldown tracking remains reliable when the active-status window is missed.",
   "Tags": [
     "pvp",
     "ui",

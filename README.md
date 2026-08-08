@@ -31,6 +31,8 @@ This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
   zone, frame-rate-independent response, and large-movement snap threshold.
 - Shows an optional shield symbol for Guard: outlined/checkmarked when ready,
   solid while active, and slashed while on an observed cooldown.
+- Observes enemy Guard actions directly so their cooldown state is retained
+  even if the short active-status window is missed between rendered frames.
 - Supports configurable range, HP and MP bar size, world height, screen
   offset, colors, shield overlay, Guard-symbol size and spacing, names, HP
   percentages, and target highlighting.
@@ -92,11 +94,12 @@ Enemy actors must remain targetable. This prevents the overlay from exposing
 players while the game marks them hidden, untargetable, or unavailable.
 
 Guard's active state is read from the status effects already exposed for the
-loaded actor. The 30-second cooldown state is inferred after PvP TopPlates
-observes that activation. A Guard use that occurs while an actor is not loaded
-or visible to the client cannot be reconstructed, so the symbol returns to the
-ready state when no observed cooldown remains. Revival resets the tracked
-state because PvP action recast timers reset on revival.
+loaded actor. PvP TopPlates also observes client-received Guard action effects
+for both allies and enemies, allowing the 30-second cooldown state to begin
+even when the short active-status window is missed. A Guard use that occurs
+outside the client's loaded combat range cannot be reconstructed, so the
+symbol returns to the ready state when no observed cooldown remains. Revival
+resets the tracked state because PvP action recast timers reset on revival.
 
 ## Compatibility
 

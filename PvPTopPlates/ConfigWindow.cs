@@ -107,7 +107,7 @@ internal sealed class ConfigWindow : Window, IDisposable
             configuration.ShowGuardStateSymbol,
             value => configuration.ShowGuardStateSymbol = value);
         HelpMarker(
-            "Outlined shield: ready. Solid shield: active. Slashed shield: cooldown after an observed Guard activation.");
+            "Works for allies and enemies. Outlined shield: ready. Solid shield: active. Slashed shield: cooldown after an observed Guard activation.");
         changed |= DrawCheckbox(
             "Shield overlay",
             configuration.ShowShields,
