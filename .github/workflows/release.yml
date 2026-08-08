@@ -63,10 +63,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release view "${{ steps.version.outputs.tag }}" --repo "${{ github.repository }}" 2>$null
+          gh release view "${{ steps.version.outputs.tag }}" --repo "${{ github.repository }}" 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) {
               throw "${{ steps.version.outputs.tag }} already exists. Bump <Version> before publishing changed plugin code."
           }
+          $global:LASTEXITCODE = 0
+          Write-Host "${{ steps.version.outputs.tag }} is available for publication."
 
       - name: Restore locked dependencies
         run: dotnet restore .\PvPTopPlates\PvPTopPlates.csproj --locked-mode
