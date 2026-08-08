@@ -3,7 +3,7 @@
     "Author": "Melody Pendragon",
     "Name": "PvP TopPlates",
     "InternalName": "PvPTopPlates",
-    "AssemblyVersion": "1.2.1.0",
+    "AssemblyVersion": "1.2.2.0",
     "Description": "Draws stabilized PvP player HP, shield, MP, and Guard-state indicators in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/Petra105/PvPTopPlates",
@@ -21,12 +21,12 @@
     "CanUnloadAsync": false,
     "LoadPriority": 0,
     "Punchline": "Keeps PvP resources and Guard state above the 3D world.",
-    "Changelog": "Adds direct enemy Guard-use observation so enemy cooldown tracking remains reliable when the active-status window is missed.",
+    "Changelog": "Fixes enemy Guard detection by observing the correct PvP Guard action and both current Guard status variants.",
     "AcceptsFeedback": true,
     "IsHide": false,
     "IsTestingExclusive": false,
-    "DownloadLinkInstall": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.2.1/PvPTopPlates.zip",
-    "DownloadLinkUpdate": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.2.1/PvPTopPlates.zip",
-    "LastUpdate": 1786229672
+    "DownloadLinkInstall": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.2.2/PvPTopPlates.zip",
+    "DownloadLinkUpdate": "https://github.com/Petra105/PvPTopPlates/releases/download/v1.2.2/PvPTopPlates.zip",
+    "LastUpdate": 1786232391
   }
 ]
