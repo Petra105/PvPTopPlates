@@ -68,8 +68,14 @@ internal sealed class OverlayRenderer
             configuration.RequireNativeNameplatePresence &&
             nameplateTracker.HasCurrentSnapshot;
 
-        foreach (var actor in Plugin.ObjectTable.PlayerObjects)
+        foreach (var gameObject in Plugin.ObjectTable.CharacterManagerObjects)
         {
+            if (gameObject is not IBattleChara actor ||
+                actor.ObjectKind != ObjectKind.Pc)
+            {
+                continue;
+            }
+
             if (!TryCreateCandidate(
                     actor,
                     localPlayer,
@@ -134,7 +140,10 @@ internal sealed class OverlayRenderer
 
         var guardState = UpdateGuardState(actor, currentTick);
 
-        var relation = GetRelation(actor, localPlayer.GameObjectId);
+        var relation = GetRelation(
+            actor,
+            localPlayer.GameObjectId,
+            Plugin.ClientState.IsPvP);
         if (!ShouldShowRelation(relation))
             return false;
 
@@ -146,7 +155,8 @@ internal sealed class OverlayRenderer
 
         if (requireNativePlate &&
             relation != PlayerRelation.LocalPlayer &&
-            !nameplateTracker.ActiveGameObjectIds.Contains(actor.GameObjectId))
+            relation != PlayerRelation.Enemy &&
+            !nameplateTracker.Contains(actor.GameObjectId, actor.EntityId))
         {
             return false;
         }
@@ -229,19 +239,22 @@ internal sealed class OverlayRenderer
         };
     }
 
-    private static PlayerRelation GetRelation(IBattleChara actor, ulong localPlayerId)
+    private static PlayerRelation GetRelation(
+        IBattleChara actor,
+        ulong localPlayerId,
+        bool isPvP)
     {
         if (actor.GameObjectId == localPlayerId)
             return PlayerRelation.LocalPlayer;
-
-        if (actor.StatusFlags.HasFlag(StatusFlags.Hostile))
-            return PlayerRelation.Enemy;
 
         if (actor.StatusFlags.HasFlag(StatusFlags.PartyMember))
             return PlayerRelation.Party;
 
         if (actor.StatusFlags.HasFlag(StatusFlags.AllianceMember))
             return PlayerRelation.Alliance;
+
+        if (actor.StatusFlags.HasFlag(StatusFlags.Hostile) || isPvP)
+            return PlayerRelation.Enemy;
 
         return PlayerRelation.OtherFriendly;
     }

@@ -24,7 +24,14 @@ This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
 
 - Runs only in PvP by default.
 - Draws only targetable, living player characters with valid HP data.
-- Respects currently active native nameplates by default.
+- Respects currently active native nameplates for non-enemies by default.
+- Scans every character-manager slot for player characters instead of relying
+  on the convenience player enumerable, which can omit PvP actors.
+- Treats non-party and non-alliance player characters as enemies while PvP is
+  active, even when Crystalline Conflict does not set the usual hostile flag.
+- Uses the game's targetable state for enemy visibility because the native
+  nameplate snapshot is not reliable for enemy players in Crystalline
+  Conflict.
 - Separately filters enemies, party members, alliance members, the local
   player, and other friendly players.
 - Smooths small frame-to-frame projection changes with a configurable dead
@@ -87,12 +94,14 @@ building.
 ## Visibility notes
 
 The `Require an active native nameplate` option is enabled by default. It
-limits the overlay to actors for which the game is currently maintaining a
-nameplate. Disable it only if a specific PvP mode fails to report expected
-players.
+limits non-enemy overlays to actors for which the game is currently
+maintaining a nameplate. Enemy overlays do not use this gate because
+Crystalline Conflict does not reliably report enemy nameplates through the
+Dalamud nameplate snapshot.
 
-Enemy actors must remain targetable. This prevents the overlay from exposing
-players while the game marks them hidden, untargetable, or unavailable.
+Enemy actors must remain targetable. This remains the authoritative visibility
+gate and prevents the overlay from exposing players while the game marks them
+hidden, untargetable, or unavailable.
 
 Guard's active state is read from either Guard status variant exposed for the
 loaded actor. PvP TopPlates also observes client-received Guard action effects

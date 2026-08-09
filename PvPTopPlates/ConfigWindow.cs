@@ -65,7 +65,7 @@ internal sealed class ConfigWindow : Window, IDisposable
             configuration.RequireNativeNameplatePresence,
             value => configuration.RequireNativeNameplatePresence = value);
         HelpMarker(
-            "Recommended. Limits the overlay to actors for which the game currently maintains a nameplate.");
+            "Limits non-enemy overlays to actors for which the game currently maintains a nameplate. PvP enemies instead use the game's targetable state because Crystalline Conflict does not reliably expose their native nameplates through Dalamud.");
 
         DrawSectionHeader("Players");
         changed |= DrawCheckbox(
