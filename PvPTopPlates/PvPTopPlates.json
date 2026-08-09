@@ -1,11 +1,11 @@
 {
-  "Author": "Melody Pendragon",
+  "Author": "Petra105",
   "Name": "PvP TopPlates",
   "Punchline": "Keeps PvP resources and Guard state above the 3D world.",
   "Description": "Draws stabilized PvP player HP, shield, MP, and Guard-state indicators in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
   "RepoUrl": "https://github.com/Petra105/PvPTopPlates",
   "ApplicableVersion": "any",
-  "Changelog": "Fixes missing enemy plates in Crystalline Conflict by scanning every player-character slot, classifying non-party PvP players as enemies, and using targetability for enemy visibility.",
+  "Changelog": "Changes the plugin author attribution to Petra105.",
   "Tags": [
     "pvp",
     "ui",
