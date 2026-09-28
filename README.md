@@ -34,6 +34,8 @@ This is a Dalamud plugin, not a Penumbra or TexTools asset mod.
   Conflict.
 - Separately filters enemies, party members, alliance members, the local
   player, and other friendly players.
+- Always draws the local player's plate last so no other PvP TopPlates overlay
+  can cover it, including the current target.
 - Smooths small frame-to-frame projection changes with a configurable dead
   zone, frame-rate-independent response, and large-movement snap threshold.
 - Shows an optional shield symbol for Guard: outlined/checkmarked when ready,

@@ -5,7 +5,7 @@
   "Description": "Draws stabilized PvP player HP, shield, MP, and Guard-state indicators in Dalamud's foreground UI layer so terrain and map geometry cannot cover them.\n\nUse /ptop to configure.",
   "RepoUrl": "https://github.com/Petra105/PvPTopPlates",
   "ApplicableVersion": "any",
-  "Changelog": "Changes the plugin author attribution to Petra105.",
+  "Changelog": "Keeps the local player's plate above every other PvP TopPlates overlay.",
   "Tags": [
     "pvp",
     "ui",

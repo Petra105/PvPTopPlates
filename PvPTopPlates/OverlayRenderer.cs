@@ -97,6 +97,13 @@ internal sealed class OverlayRenderer
 
         candidates.Sort(static (left, right) =>
         {
+            if (left.Relation == PlayerRelation.LocalPlayer ||
+                right.Relation == PlayerRelation.LocalPlayer)
+            {
+                if (left.Relation != right.Relation)
+                    return left.Relation == PlayerRelation.LocalPlayer ? 1 : -1;
+            }
+
             if (left.IsCurrentTarget != right.IsCurrentTarget)
                 return left.IsCurrentTarget ? 1 : -1;
 
